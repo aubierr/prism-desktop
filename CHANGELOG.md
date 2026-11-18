@@ -24,3 +24,4 @@
 - Raised minimum dependency versions so source installs don't pull in releases with known vulnerabilities. Running from source now needs Python 3.11 or newer.
 - Updated the workflow actions.
 - The auto-updater now refuses a download it cannot check against the release's SHA256SUMS, instead of installing it unchecked when that file is missing.
+- On Windows, when the Credential Manager can't be used, the token file is now encrypted with your Windows account (DPAPI) instead of a key derived from the machine ID, which any local program could read. An existing token file is converted the next time the app starts.
