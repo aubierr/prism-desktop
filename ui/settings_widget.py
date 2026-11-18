@@ -40,7 +40,7 @@ from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
 from core.localization_manager import t, current_language, supported_languages, init_localization
 
-from core.build_info import APP_VERSION, get_display_version
+from core.build_info import VERSION_LABEL, get_display_version
 from core.worker_threads import ConnectionTestThread
 from ui.icons import Icons, get_mdi_font
 from services.update_checker import UpdateCheckerThread
@@ -1756,24 +1756,24 @@ class SettingsWidget(QWidget):
 
     def _set_version_label_collapsed(self):
         full = get_display_version()
-        has_commit = full != APP_VERSION
+        has_commit = full != VERSION_LABEL
         if has_commit:
             self.update_label.setCursor(Qt.CursorShape.PointingHandCursor)
             self.update_label.setText(
-                f'<span style="color: #aaa; font-size: 11px;"><a href="expand" {self._VERSION_STYLE}>v{APP_VERSION}</a></span>'
+                f'<span style="color: #aaa; font-size: 11px;"><a href="expand" {self._VERSION_STYLE}>v{VERSION_LABEL}</a></span>'
             )
         else:
             self.update_label.setCursor(Qt.CursorShape.ArrowCursor)
-            self.update_label.setText(f'<span style="color: #aaa; font-size: 11px;">v{APP_VERSION}</span>')
+            self.update_label.setText(f'<span style="color: #aaa; font-size: 11px;">v{VERSION_LABEL}</span>')
 
     def _set_version_label_expanded(self):
         full = get_display_version()
-        suffix = full[len(APP_VERSION) :]
+        suffix = full[len(VERSION_LABEL) :]
         if suffix:
             self.update_label.setCursor(Qt.CursorShape.PointingHandCursor)
             commit = suffix.strip(" ()")
             self.update_label.setText(
-                f'<span style="color: #aaa; font-size: 11px;"><a href="collapse" {self._VERSION_STYLE}>v{APP_VERSION}</a>'
+                f'<span style="color: #aaa; font-size: 11px;"><a href="collapse" {self._VERSION_STYLE}>v{VERSION_LABEL}</a>'
                 f' - <a href="copy" {self._HASH_STYLE}>({commit})</a></span>'
             )
 
@@ -1788,10 +1788,10 @@ class SettingsWidget(QWidget):
         elif href == "copy":
             full = get_display_version()
             QApplication.clipboard().setText(f"v{full}")
-            suffix = full[len(APP_VERSION) :]
+            suffix = full[len(VERSION_LABEL) :]
             commit = suffix.strip(" ()")
             self.update_label.setText(
-                f'<span style="color: #aaa; font-size: 11px;"><a href="collapse" {self._VERSION_STYLE}>v{APP_VERSION}</a>'
+                f'<span style="color: #aaa; font-size: 11px;"><a href="collapse" {self._VERSION_STYLE}>v{VERSION_LABEL}</a>'
                 f' <a href="copy" {self._VERSION_STYLE}>({commit})</a>'
                 f' - {t("settings.support.copied")}</span>'
             )
