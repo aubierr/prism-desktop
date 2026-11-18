@@ -175,6 +175,15 @@ cd prism-desktop
 pip install -r requirements.txt
 python main.py
 ```
+
+### Running the Tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The tests never touch your real `config.json`, token or keyring: each one runs against a temporary config folder. They also run on GitHub Actions (Linux, Windows, macOS) for every push.
  
 ---
  
