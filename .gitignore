@@ -16,8 +16,8 @@ AppDir/
 *.AppImage
 appimagetool*
 
-# Tests (kept local, not published)
-tests/
+# Tests
+.pytest_cache/
 
 # Python
 __pycache__/
