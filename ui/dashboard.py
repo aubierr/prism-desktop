@@ -68,6 +68,7 @@ from ui.widgets.notification_banner import NotificationBanner
 from ui.widgets.assist_overlay import AssistOverlay
 from ui.managers.overlay_manager import OverlayManager
 from ui.managers.grid_manager import GridManager
+from ui.managers.window_mover import WindowMoveMixin
 from ui.grid_layout_engine import plan_move
 from ui.settings_widget import SettingsWidget
 from ui.button_edit_widget import ButtonEditWidget
@@ -94,7 +95,7 @@ class FrozenScrollArea(QScrollArea):
         event.accept()
 
 
-class Dashboard(QWidget):
+class Dashboard(WindowMoveMixin, QWidget):
     """Main dashboard popup widget with dynamic grid."""
 
     button_clicked = pyqtSignal(dict)  # Button config
@@ -201,6 +202,7 @@ class Dashboard(QWidget):
         self._resize_start_cols = cols
 
         self._ignore_focus_loss = False  # Guard for resize release outside window
+        self._init_window_move()
 
         # Drag & Drop
         self.setAcceptDrops(True)
@@ -387,8 +389,9 @@ class Dashboard(QWidget):
         return self.config.get('appearance', {}).get('tray_position', default_pos)
 
     def _is_top_anchored(self) -> bool:
-        """Whether the dashboard should stay pinned to the top edge."""
-        return self._get_tray_position() == 'top'
+        """Whether the dashboard should stay pinned to the top edge.
+        A window the user dragged somewhere grows downward like a top-anchored one."""
+        return self._is_free_positioned() or self._get_tray_position() == 'top'
 
     def _calculate_target_height(self, rows: int | None = None) -> int:
         """Calculate total window height for a given row count."""
@@ -476,6 +479,15 @@ class Dashboard(QWidget):
 
     def refresh_tray_anchor(self, move_now: bool = False, tray_geometry: QRect | None = None):
         """Refresh cached tray geometry after config changes."""
+        if tray_geometry and not tray_geometry.isNull():
+            self._last_tray_geometry = QRect(tray_geometry)
+        free_pos = self._free_target_pos()
+        if free_pos is not None:
+            self._target_pos = free_pos
+            if move_now and self.isVisible() and not self._user_moving:
+                self.move(free_pos)
+            return
+
         screen = self._screen_for_tray_geometry(tray_geometry)
         if not screen:
             return
@@ -677,6 +689,7 @@ class Dashboard(QWidget):
 
         # Chain to width resize check
         self._check_pending_resize()
+        self._clamp_free_position()
 
     def _apply_pending_rows(self):
         self._rows = self._pending_rows_update
@@ -881,6 +894,8 @@ class Dashboard(QWidget):
         # Lock only at the VERY end
         if self.height_anim.state() != QPropertyAnimation.State.Running:
             self.setFixedSize(self.width(), self.height())
+
+        self._clamp_free_position()
 
         # Emit signal
         self.cols_changed.emit()
@@ -2455,6 +2470,10 @@ class Dashboard(QWidget):
 
     def _reposition_after_morph(self):
         """Reposition window to keep it anchored to the configured tray edge."""
+        free_pos = self._free_target_pos()
+        if free_pos is not None:
+            self.move(free_pos)
+            return
         try:
             screen = self.screen()
         except Exception:
@@ -2513,6 +2532,11 @@ class Dashboard(QWidget):
                 event.accept()
                 return
 
+            if self._in_move_zone(x, y):
+                self._start_window_move(event.globalPosition().toPoint())
+                event.accept()
+                return
+
         super().mousePressEvent(event)
 
     def leaveEvent(self, event):
@@ -2538,12 +2562,17 @@ class Dashboard(QWidget):
             near_vertical_resize = (
                 pos.y() > self.height() - RESIZE_MARGIN if self._is_top_anchored() else pos.y() < RESIZE_MARGIN
             )
-            if not near_vertical_resize and pos.x() >= RESIZE_MARGIN:
+            if (not near_vertical_resize and pos.x() >= RESIZE_MARGIN
+                    and not self._in_move_zone(pos.x(), pos.y())):
                 self.unsetCursor()
         return super().eventFilter(obj, event)
 
     def mouseMoveEvent(self, event):
         """Handle resize drag and hover cursor."""
+        if self._manual_move_offset is not None:
+            self._manual_move_to(event.globalPosition().toPoint())
+            event.accept()
+            return
         # Only allow resizing in Grid View (and not while Assist is open)
         if self._current_view != 'grid' or self._assist_active:
             self.unsetCursor()
@@ -2572,6 +2601,8 @@ class Dashboard(QWidget):
             self.setCursor(Qt.CursorShape.SizeVerCursor)
         elif x < RESIZE_MARGIN:
             self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif self._in_move_zone(x, y):
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
         else:
             self.unsetCursor()
 
@@ -2590,6 +2621,9 @@ class Dashboard(QWidget):
 
     def mouseReleaseEvent(self, event):
         """End resize drag."""
+        if self._end_manual_move():
+            event.accept()
+            return
         if self._is_resizing_window:
             self._is_resizing_window = False
             self._resize_mode = None

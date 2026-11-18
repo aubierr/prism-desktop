@@ -209,6 +209,38 @@ On first launch, you'll be prompted for:
 1. Your **Home Assistant URL** (e.g. `http://homeassistant.local:8123`)
 2. A **Long-Lived Access Token** — generate one in your Home Assistant profile under *Security → Long-Lived Access Tokens*
 
+### Moving the window
+
+Drag the dashboard by its right edge (or the top/bottom edge that doesn't resize it), or hold **Alt** and drag from anywhere on it. It reopens at the same place, on the same screen, after a restart. Tray menu → **Reset window position** puts it back next to the tray.
+
+### Turning the PC on and off from Home Assistant
+
+In Prism: *Settings → Home Assistant* → **Add the On/Off switch to Home Assistant**. A **Power** switch appears on this PC's device page in Home Assistant, under *Controls*:
+
+- **On** wakes the PC with Wake-on-LAN (Prism adds the Wake-on-LAN integration to Home Assistant if it's missing).
+- **Off** shuts the PC down through Prism (this also turns on **Allow shutdown from Home Assistant**).
+- It shows on while Prism reports in (a *Power* sensor sent every 30 s) and off once Prism quits or stops reporting for 2.5 minutes.
+
+It's a regular Template helper (*Settings → Devices & services → Helpers*): you can rename it or change its icon. It needs an administrator token. Click the button again after changing network card to update the MAC address.
+
+Wake-on-LAN must be allowed on the PC:
+- BIOS/UEFI: enable *Wake on LAN* / *Power On by PCI-E*.
+- Windows, Device Manager → network card → *Power Management*: tick *Allow this device to wake the computer* and *Only allow a magic packet*; *Advanced*: *Wake on Magic Packet* = Enabled.
+- Windows: turn off *Fast startup* (Control Panel → Power Options → Choose what the power buttons do), many network cards can't wake from it.
+- Use a wired connection: Wi-Fi cards rarely wake from shutdown.
+
+You can also call the notify service yourself, e.g. in a script or automation:
+
+```yaml
+action: notify.mobile_app_my_pc
+data:
+  message: command_shutdown   # or command_restart, command_sleep, command_hibernate, command_lock, command_cancel
+  data:
+    delay: 60                 # optional, seconds (max 600)
+```
+
+On Windows, `command_sleep` hibernates instead when hibernation is enabled (that's how Windows' sleep call works).
+
 ---
  
 ## Building

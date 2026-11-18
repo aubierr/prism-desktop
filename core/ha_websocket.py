@@ -13,6 +13,7 @@ import threading
 import logging
 
 DEFAULT_NOTIFICATION_TITLE = 'Home Assistant'
+from services.power_control import is_command as is_power_command
 
 
 class AuthenticationError(Exception):
@@ -41,6 +42,7 @@ class HAWebSocket(QObject):
     disconnected = pyqtSignal()
     state_changed = pyqtSignal(str, dict)  # entity_id, new_state
     notification_received = pyqtSignal(dict)  # full notification payload dict
+    power_command_received = pyqtSignal(dict)  # 'command_*' sent to notify.mobile_app_* (push channel only)
     error = pyqtSignal(str)
 
     def __init__(self, url: str = "", token: str = ""):
