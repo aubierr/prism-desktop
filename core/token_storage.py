@@ -121,12 +121,12 @@ def _get_machine_seed() -> bytes:
     if sys.platform == "linux":
         try:
             seed = Path("/etc/machine-id").read_text().strip()
-        except Exception:
+        except (OSError, ValueError):  # missing or unreadable
             pass
         if not seed:
             try:
                 seed = Path("/var/lib/dbus/machine-id").read_text().strip()
-            except Exception:
+            except (OSError, ValueError):
                 pass
 
     elif sys.platform == "win32":
@@ -138,7 +138,7 @@ def _get_machine_seed() -> bytes:
             )
             seed, _ = winreg.QueryValueEx(key, "MachineGuid")
             winreg.CloseKey(key)
-        except Exception:
+        except OSError:  # key or value missing
             pass
 
     elif sys.platform == "darwin":
@@ -152,7 +152,7 @@ def _get_machine_seed() -> bytes:
                 if "IOPlatformUUID" in line:
                     seed = line.split('"')[-2]
                     break
-        except Exception:
+        except (OSError, subprocess.SubprocessError, IndexError):
             pass
 
     if not seed:

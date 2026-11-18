@@ -656,7 +656,7 @@ class OverlayManager(QObject):
              try:
                  temp_str = str(source_btn._value).replace('°', '').strip()
                  curr_temp = float(temp_str)
-             except: pass
+             except ValueError: pass
              
         # Colors
         if self.theme_manager:

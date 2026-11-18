@@ -55,7 +55,7 @@ class ConfigManager:
 
                     return config
             except Exception as e:
-                logger.error(f"Error loading config: {e}")
+                logger.error(f"Error loading config: {e}", exc_info=True)
                 self._backup_corrupt_config()
 
         return {
@@ -111,7 +111,7 @@ class ConfigManager:
                 os.unlink(tmp_path)
                 raise
         except Exception as e:
-            logger.error(f"Error saving raw config: {e}")
+            logger.error(f"Error saving raw config: {e}", exc_info=True)
 
     def save_config(self):
         """Save current configuration to file."""
@@ -127,4 +127,4 @@ class ConfigManager:
 
             self.save_raw_config(config_to_save)
         except Exception as e:
-            logger.error(f"Error saving config: {e}")
+            logger.error(f"Error saving config: {e}", exc_info=True)

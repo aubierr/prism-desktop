@@ -708,7 +708,7 @@ class PrismDesktopApp(QObject):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Camera loop error: {e}")
+                logger.error(f"Camera loop error: {e}", exc_info=True)
                 await asyncio.sleep(10)
 
     @staticmethod
@@ -789,8 +789,8 @@ class PrismDesktopApp(QObject):
         payload = {"type": "update_sensor_states", "data": build_sensor_state_payload(states)}
         try:
             requests.post(url, json=payload, timeout=3)
-        except Exception:
-            pass
+        except requests.RequestException as e:
+            logger.debug(f"[Main] logged_in sensor push at shutdown failed: {e}")
     
     @pyqtSlot(dict)
     def on_settings_saved(self, new_config: dict):
@@ -1603,7 +1603,7 @@ def _read_language_from_config() -> str:
         if cfg_path.exists():
             with open(cfg_path, "r", encoding="utf-8") as f:
                 return json.load(f).get("appearance", {}).get("language", "en")
-    except Exception:
+    except (OSError, ValueError, AttributeError):  # unreadable, invalid or oddly shaped config
         pass
     return "en"
 

@@ -69,7 +69,7 @@ try:
         supports_wayland_global_shortcuts,
     )
     _WAYLAND_PORTAL_AVAILABLE = True
-except Exception:
+except ImportError:  # dbus_next not installed (Windows, macOS, minimal Linux)
     WaylandGlobalShortcut = None
 
     def is_wayland_session():
@@ -124,10 +124,10 @@ class InputManager(QObject):
             self._health_timer.stop()
             return
 
-        print(f"InputManager: Setting shortcut to {config}")
+        logger.info(f"InputManager: Setting shortcut to {config}")
 
         if self._is_unsupported_wayland_keyboard_shortcut():
-            print("InputManager: Global keyboard shortcut disabled on this Wayland desktop")
+            logger.info("InputManager: Global keyboard shortcut disabled on this Wayland desktop")
             return
         
         if config.get('type') == 'keyboard':
@@ -144,9 +144,9 @@ class InputManager(QObject):
         self.stop_listening()  # emits recording_stopped if was recording
         if not self._current_shortcut:
             return
-        print(f"InputManager: Restoring shortcut {self._current_shortcut}")
+        logger.info(f"InputManager: Restoring shortcut {self._current_shortcut}")
         if self._is_unsupported_wayland_keyboard_shortcut():
-            print("InputManager: Global keyboard shortcut disabled on this Wayland desktop")
+            logger.info("InputManager: Global keyboard shortcut disabled on this Wayland desktop")
             return
         if self._current_shortcut.get('type') == 'keyboard':
             self._start_keyboard_listener()
@@ -171,7 +171,7 @@ class InputManager(QObject):
         
         self._keyboard_listener.start()
         self._mouse_listener.start()
-        print("InputManager: Recording started...")
+        logger.debug("InputManager: Recording started...")
 
     def stop_listening(self):
         """Stop all listeners."""
@@ -202,10 +202,10 @@ class InputManager(QObject):
             try:
                 self._wayland_shortcut = WaylandGlobalShortcut(shortcut_str, self._on_trigger)
                 self._wayland_shortcut.start()
-                print(f"InputManager: Started Wayland portal shortcut registration for '{shortcut_str}'")
+                logger.info(f"InputManager: Started Wayland portal shortcut registration for '{shortcut_str}'")
                 return
             except Exception as e:
-                print(f"InputManager: Wayland portal shortcut setup failed, falling back to pynput: {e}")
+                logger.warning(f"InputManager: Wayland portal shortcut setup failed, falling back to pynput: {e}")
                 self._wayland_shortcut = None
 
         # VK-based keys like <102> (numpad with modifiers) cannot be reliably matched
@@ -221,7 +221,7 @@ class InputManager(QObject):
             })
             self._keyboard_listener.start()
         except Exception as e:
-            print(f"InputManager: Invalid hotkey '{shortcut_str}': {e}")
+            logger.warning(f"InputManager: Invalid hotkey '{shortcut_str}': {e}")
 
     def _start_vk_keyboard_listener(self, shortcut_str):
         """Manual listener for hotkeys containing raw VK codes like <102>.
@@ -247,10 +247,10 @@ class InputManager(QObject):
                     target_vk = int(m.group(1))
 
         if target_vk is None:
-            print(f"InputManager: Could not parse VK from hotkey '{shortcut_str}'")
+            logger.warning(f"InputManager: Could not parse VK from hotkey '{shortcut_str}'")
             return
 
-        print(f"InputManager: VK-based listener — mods={required_mods}, vk={target_vk}")
+        logger.info(f"InputManager: VK-based listener — mods={required_mods}, vk={target_vk}")
         pressed_mods = set()
 
         def _mod_name(key):
@@ -296,7 +296,7 @@ class InputManager(QObject):
 
     def _on_trigger(self):
         """Emit trigger signal."""
-        print("InputManager: Triggered!")
+        logger.debug("InputManager: Triggered!")
         self.triggered.emit()
     
     def _check_listener_alive(self):
@@ -310,7 +310,7 @@ class InputManager(QObject):
         
         if shortcut_type == 'keyboard' and self._keyboard_listener:
             if not self._keyboard_listener.is_alive():
-                print("InputManager: Keyboard listener died, restarting...")
+                logger.warning("InputManager: Keyboard listener died, restarting...")
                 self._keyboard_listener = None
                 self._start_keyboard_listener()
         elif shortcut_type == 'keyboard' and self._wayland_shortcut:
@@ -319,19 +319,19 @@ class InputManager(QObject):
                     # The portal said no; restarting would only re-open its dialog every
                     # 30s. Stay quiet until the shortcut is changed or restored.
                     return
-                print("InputManager: Wayland shortcut backend died, restarting...")
+                logger.warning("InputManager: Wayland shortcut backend died, restarting...")
                 self._wayland_shortcut = None
                 self._start_keyboard_listener()
         elif shortcut_type == 'mouse' and self._mouse_listener:
             if not self._mouse_listener.is_alive():
-                print("InputManager: Mouse listener died, restarting...")
+                logger.warning("InputManager: Mouse listener died, restarting...")
                 self._mouse_listener = None
                 self._start_mouse_listener()
         elif shortcut_type == 'keyboard' and not self._keyboard_listener and not self._wayland_shortcut:
-            print("InputManager: Keyboard listener missing, restarting...")
+            logger.warning("InputManager: Keyboard listener missing, restarting...")
             self._start_keyboard_listener()
         elif shortcut_type == 'mouse' and not self._mouse_listener:
-            print("InputManager: Mouse listener missing, restarting...")
+            logger.warning("InputManager: Mouse listener missing, restarting...")
             self._start_mouse_listener()
 
     # --- Recording Logic ---
@@ -350,7 +350,7 @@ class InputManager(QObject):
         combo_str = self._format_combo(self._pressed_keys)
         
         if combo_str:
-             print(f"Recorded Keyboard: {combo_str}")
+             logger.debug(f"Recorded Keyboard: {combo_str}")
              self.recorded.emit({'type': 'keyboard', 'value': combo_str})
              self.stop_listening()
         
@@ -365,7 +365,7 @@ class InputManager(QObject):
         # click itself is never captured here.
         btn_str = self._mouse_map.get(button, str(button))
 
-        print(f"Recorded Mouse: {btn_str}")
+        logger.debug(f"Recorded Mouse: {btn_str}")
         self.recorded.emit({'type': 'mouse', 'value': btn_str})
         self.stop_listening()
 
@@ -486,7 +486,7 @@ class ButtonShortcutManager(QObject):
         }
         if self._shortcuts:
             self._start_listener()
-        print(f"ButtonShortcutManager: {len(self._shortcuts)} active shortcut(s): {list(self._shortcuts.keys())}")
+        logger.debug(f"ButtonShortcutManager: {len(self._shortcuts)} active shortcut(s): {list(self._shortcuts.keys())}")
 
     def set_paused(self, paused: bool):
         self._paused = paused

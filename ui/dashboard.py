@@ -1470,7 +1470,7 @@ class Dashboard(QWidget):
                 try:
                     # Qt Key to char
                     if chr(key).lower() == target_key: return True
-                except: pass
+                except ValueError: pass
                 
             return False
 
@@ -2515,7 +2515,7 @@ class Dashboard(QWidget):
             # but disconnect in case a stale connection still exists.
             if hasattr(self, 'height_anim') and self.height_anim:
                  self.height_anim.finished.disconnect(self._on_transition_done)
-        except:
+        except TypeError:  # not connected
             pass
             
         # Unlock grid size so it behaves normally (if we are in grid view)
@@ -2570,7 +2570,7 @@ class Dashboard(QWidget):
         """Reposition window to keep it anchored to the configured tray edge."""
         try:
             screen = self.screen()
-        except:
+        except RuntimeError:  # underlying C++ window already deleted
             screen = QApplication.primaryScreen()
             
         if not screen:

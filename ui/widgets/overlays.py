@@ -1449,7 +1449,7 @@ class WeatherOverlay(BaseOverlay):
                 try:
                     from datetime import datetime
                     day_str = datetime.fromisoformat(dt_str).strftime("%a")
-                except Exception:
+                except (TypeError, ValueError):
                     day_str = "-"
 
                 f_emoji = self._get_weather_emoji(f.get('condition', 'unknown'))

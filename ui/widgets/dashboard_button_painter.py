@@ -785,7 +785,7 @@ class DashboardButtonPainter:
                         nozzle_str = f"{_fmt(n_act)}/{_fmt(n_tgt)}"
                     else:
                         nozzle_str = _fmt(n_act)
-                except: nozzle_str = _fmt(nozzle_val)
+                except (TypeError, ValueError): nozzle_str = _fmt(nozzle_val)
 
             # Bed
             bed_data = dashboard._entity_states.get(cfg.get('printer_bed_entity'), {})
@@ -804,7 +804,7 @@ class DashboardButtonPainter:
                         bed_str = f"{_fmt_bed(b_act)}/{_fmt_bed(b_tgt)}"
                     else:
                         bed_str = _fmt_bed(b_act)
-                except: bed_str = _fmt_bed(bed_val)
+                except (TypeError, ValueError): bed_str = _fmt_bed(bed_val)
             
         icon = Icons.PRINTER_3D # standard mdi-printer-3d
         
@@ -1013,7 +1013,7 @@ class DashboardButtonPainter:
             
             # Progress %
             try: prog_val = float(progress)
-            except: prog_val = 0.0
+            except (TypeError, ValueError): prog_val = 0.0
                 
             if printer_state.lower() not in ["off", "unavailable"]:
                  painter.setFont(QFont(SYSTEM_FONT, 11, QFont.Weight.Medium))
@@ -1033,7 +1033,7 @@ class DashboardButtonPainter:
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, icon)
             
             try: prog_val = float(progress)
-            except: prog_val = 0.0
+            except (TypeError, ValueError): prog_val = 0.0
             
             if prog_val > 0 and prog_val < 100 and printer_state.lower() not in ["off", "unavailable"]:
                  # Small progress indicator text below icon
@@ -1510,7 +1510,7 @@ class DashboardButtonPainter:
                 total_secs   = (next_setting - sunrise).total_seconds()
                 elapsed      = (now - sunrise).total_seconds()
                 ratio = max(0.0, min(1.0, elapsed / total_secs)) if total_secs > 0 else 0.5
-            except Exception:
+            except (AttributeError, TypeError, ValueError):  # missing or malformed timestamps
                 ratio = 0.5
 
         # Moon ratio: 0 = prev sunset, 1 = next sunrise
@@ -1524,7 +1524,7 @@ class DashboardButtonPainter:
                 night_dur    = (next_rising - prev_sunset).total_seconds()
                 elapsed      = (now - prev_sunset).total_seconds()
                 moon_ratio = max(0.0, min(1.0, elapsed / night_dur)) if night_dur > 0 else 0.5
-            except Exception:
+            except (AttributeError, TypeError, ValueError):  # missing or malformed timestamps
                 moon_ratio = 0.5
 
         # Layout — mirrors sensor gauge positioning
@@ -1616,7 +1616,7 @@ class DashboardButtonPainter:
                 time_str = format_remaining(secs) if secs > 0 else None
             else:
                 time_str = None
-        except Exception:
+        except (AttributeError, TypeError, ValueError):  # missing or malformed timestamps
             time_str = None
 
         if time_str:

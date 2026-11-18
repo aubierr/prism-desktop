@@ -438,5 +438,5 @@ class NotificationManager(QObject):
             await asyncio.sleep(15)
             try:
                 os.remove(image_path)
-            except Exception:
+            except OSError:
                 pass

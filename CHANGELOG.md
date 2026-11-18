@@ -18,6 +18,7 @@
 ### Fixes
 
 - `--toggle` and `--assist` now reach the running app on Windows instead of crashing.
+- `prism.log` is more useful for bug reports: shortcut and icon messages (such as an invalid hotkey) are written to it instead of being lost in packaged builds, and unexpected errors include where they happened.
 
 ### Security
 

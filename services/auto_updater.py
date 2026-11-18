@@ -116,6 +116,7 @@ class AutoUpdateThread(QThread):
         except FileNotFoundError:
             self.error.emit("git is not available on this system.")
         except Exception as exc:
+            logger.error(f"Auto-update failed: {exc}", exc_info=True)
             self.error.emit(str(exc))
 
     # ── Frozen/packaged install (GitHub release asset) ────────────────────────
@@ -175,6 +176,7 @@ class AutoUpdateThread(QThread):
         except OSError as exc:
             self.error.emit(f"Could not apply update: {exc}")
         except Exception as exc:
+            logger.error(f"Auto-update failed: {exc}", exc_info=True)
             self.error.emit(str(exc))
         finally:
             # On Windows, the installer file must stay alive while the installer
@@ -284,7 +286,7 @@ class AutoUpdateThread(QThread):
 
         try:
             subprocess.run(["ditto", "-xk", str(zip_path), str(extract_dir)], check=True)
-        except Exception:
+        except (OSError, subprocess.CalledProcessError):
             with zipfile.ZipFile(zip_path, "r") as zf:
                 zf.extractall(extract_dir)
 
@@ -300,7 +302,7 @@ class AutoUpdateThread(QThread):
         try:
             subprocess.run(["xattr", "-cr", str(new_app)], check=False)
             subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(new_app)], check=False)
-        except Exception:
+        except OSError:  # tool missing
             pass
 
         # Move/replace current .app bundle
