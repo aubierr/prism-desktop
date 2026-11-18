@@ -14,6 +14,7 @@ GRID_MARGIN_BOTTOM = 8
 BUTTON_WIDTH = 90   # Standard single-column button width
 BUTTON_HEIGHT = 80  # Standard grid button height
 BUTTON_SPACING = 8  # Spacing between buttons
+TWO_ROW_MIN_HEIGHT = (BUTTON_HEIGHT * 2) + BUTTON_SPACING  # smallest overlay that fits two tile rows
 
 # Footer Dimensions
 FOOTER_HEIGHT = 26
