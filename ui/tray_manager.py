@@ -20,6 +20,7 @@ class TraySignals(QObject):
     """Qt signals for tray icon events."""
     left_clicked = pyqtSignal()
     quit_clicked = pyqtSignal()
+    reset_position_clicked = pyqtSignal()
 
 
 class TrayManager:
@@ -130,6 +131,8 @@ class TrayManager:
         self._menu.setStyleSheet(self._menu_stylesheet())
         show_action = self._menu.addAction(t("tray.show_dashboard"))
         show_action.triggered.connect(lambda _checked=False: self.signals.left_clicked.emit())
+        reset_pos_action = self._menu.addAction(t("tray.reset_position"))
+        reset_pos_action.triggered.connect(lambda _checked=False: self.signals.reset_position_clicked.emit())
         self._menu.addSeparator()
         quit_action = self._menu.addAction(t("tray.quit"))
         quit_action.triggered.connect(lambda _checked=False: self.signals.quit_clicked.emit())

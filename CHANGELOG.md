@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Window position
+
+- Move the dashboard anywhere, on any screen: drag it by its right edge or by the top/bottom edge you don't resize from, or hold Alt and drag from anywhere on it. It reopens where you left it, including after a restart. If that screen is unplugged it goes back next to the tray until the screen returns.
+- Tray menu → "Reset window position" puts it back next to the tray.
+
+### Turn the PC on and off from Home Assistant
+
+- New setting (off by default): *Settings → Home Assistant → Allow shutdown from Home Assistant*. Home Assistant can then send `command_shutdown`, `command_restart`, `command_sleep`, `command_hibernate`, `command_lock` or `command_cancel` to `notify.mobile_app_<this PC>`, with an optional `delay` in seconds. Only messages sent to that notify service count; persistent notifications never do.
+- "Add the On/Off switch to Home Assistant" creates a **Power** switch on this PC's device page in Home Assistant: on wakes the PC with Wake-on-LAN, off shuts it down through Prism. Its state follows a new *Power* sensor that Prism reports every 30 s.
+
 ### Assist (beta)
 
 - Typed messages now go through your preferred Assist pipeline, the same as voice, so they reach the same conversation agent (for example an LLM agent) and share one conversation.

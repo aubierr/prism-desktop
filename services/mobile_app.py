@@ -50,6 +50,16 @@ SENSORS = [
         "state_class": "measurement",
     },
     *system_sensors.SENSOR_DEFS,
+    # Fork: heartbeat for the Home Assistant on/off switch (services/power_switch.py).
+    # Pushed "on" every 30s, "off" when Prism quits or before a remote shutdown.
+    {
+        "type": "binary_sensor",
+        "unique_id": "power_state",
+        "name": "Power",
+        "device_class": "power",
+        "icon": "mdi:power",
+        "state": True,
+    },
 ]
 
 

@@ -12,6 +12,7 @@ import signal
 from pathlib import Path
 from typing import Optional
 import logging
+import threading
 import requests
 
 from core.utils import configure_ssl
@@ -98,6 +99,7 @@ from services.local_ipc import LocalCommandServer
 from services.mobile_app import register_mobile_app, send_location_update, register_sensors, update_sensor_states, build_sensor_state_payload, get_system_metrics
 from services.system_sensors import FAST_SENSORS, collect as collect_system_sensors, enabled_sensor_ids
 from services.location_manager import get_location
+from services import power_control
 from ui.icons import load_mdi_font, icon_signals
 from services.update_checker import UpdateCheckerThread
 from core.temperature_utils import normalize_temperature_unit
@@ -444,6 +446,7 @@ class PrismDesktopApp(QObject):
             theme=self.theme_manager.get_effective_theme()
         )
         self.tray_manager.start()
+        self.tray_manager.signals.reset_position_clicked.connect(self.dashboard.reset_window_position)
 
         self.theme_manager.theme_changed.connect(self.tray_manager.set_theme)
 
@@ -605,6 +608,7 @@ class PrismDesktopApp(QObject):
         
         self._ha_websocket.state_changed.connect(self.on_state_changed)
         self._ha_websocket.notification_received.connect(self.on_notification)
+        self._ha_websocket.power_command_received.connect(self.on_power_command)
         self._ha_websocket.connected.connect(self.on_ws_connected)
         self._ha_websocket.disconnected.connect(self.on_ws_disconnected)
         self._ha_websocket.error.connect(self.on_ws_error)
@@ -765,6 +769,10 @@ class PrismDesktopApp(QObject):
             self._assist_opened_dashboard = False
             self.dashboard.toggle(self._tray_geometry())
     
+    def _push_power_off_once(self):
+        if not getattr(self, '_power_off_pushed', False):
+            self._push_sensor_state_sync(False)
+
     @pyqtSlot()
     def _quit(self):
         """Quit the application."""
@@ -776,15 +784,20 @@ class PrismDesktopApp(QObject):
         QApplication.instance().quit()
 
     def _push_sensor_state_sync(self, value: bool):
-        """Synchronous logged_in sensor push for use at shutdown (event loop may be closing)."""
+        """Synchronous logged_in / power sensor push for use at shutdown (event loop may be closing)."""
         mobile_cfg = self.config.get('mobile_app', {})
-        if not mobile_cfg.get('send_logged_in', True):
-            return
         webhook_id = mobile_cfg.get('webhook_id', '')
         ha_url = self.config.get('home_assistant', {}).get('url', '')
         if not (webhook_id and ha_url):
             return
-        states = {"logged_in": "logged-in" if value else "logged-out"}
+        states = {}
+        if mobile_cfg.get('send_logged_in', True):
+            states["logged_in"] = "logged-in" if value else "logged-out"
+        if not value:
+            states["power_state"] = False
+            self._power_off_pushed = True
+        if not states:
+            return
         url = ha_url.rstrip('/') + f'/api/webhook/{webhook_id}'
         payload = {"type": "update_sensor_states", "data": build_sensor_state_payload(states)}
         try:
@@ -1264,6 +1277,38 @@ class PrismDesktopApp(QObject):
     @pyqtSlot(dict)
     def on_notification(self, payload: dict):
         self.notification_manager.show_ha_notification(payload)
+
+    @pyqtSlot(dict)
+    def on_power_command(self, payload: dict):
+        """'command_*' sent by Home Assistant to notify.mobile_app_<this pc> (fork feature)."""
+        message = str(payload.get('message', '')).strip()
+        parsed = power_control.parse_command(payload)
+        if parsed is None:
+            logger.warning(f"[Power] Unknown command from Home Assistant: {message!r}")
+            return
+        action, delay = parsed
+        if not self.config.get('mobile_app', {}).get('remote_power', False):
+            logger.warning(f"[Power] '{message}' ignored: remote power control is off in Settings")
+            self.notification_manager.show_ha_notification({
+                'title': 'Prism Desktop',
+                'message': t("notifications.power_disabled", command=message),
+            })
+            return
+        if not power_control.is_supported(action):
+            logger.warning(f"[Power] '{action}' is not supported on this system")
+            return
+        if delay and action != 'cancel':
+            self.notification_manager.show_ha_notification({
+                'title': 'Prism Desktop',
+                'message': t(f"notifications.power_{action}_in", seconds=delay),
+            })
+        def run():
+            if action in power_control.POWER_OFF_ACTIONS and not delay:
+                # Switch shows off right away instead of waiting for the heartbeat to go stale.
+                self._push_sensor_state_sync(False)
+            power_control.execute(action, delay)
+        # Commands can block a few seconds (subprocess); keep the UI responsive.
+        threading.Thread(target=run, name=f"power-{action}", daemon=True).start()
     
     @pyqtSlot()
     def on_ws_connected(self):
@@ -1389,12 +1434,8 @@ class PrismDesktopApp(QObject):
 
     def _metrics_wanted(self) -> bool:
         """True if any periodically-reported sensor is switched on."""
-        mobile_cfg = self.config.get('mobile_app', {})
-        return bool(
-            mobile_cfg.get('send_cpu', False)
-            or mobile_cfg.get('send_ram', False)
-            or enabled_sensor_ids(mobile_cfg)
-        )
+        # Fork: always — the power_state heartbeat drives the HA on/off switch.
+        return True
 
     async def _metrics_update_loop(self):
         """Periodically read sensors and push their states to Home Assistant.
@@ -1421,6 +1462,7 @@ class PrismDesktopApp(QObject):
 
                 if time.monotonic() - last_slow >= 30:
                     last_slow = time.monotonic()
+                    states['power_state'] = True  # heartbeat for the HA power switch
                     all_metrics = get_system_metrics()
                     if mobile_cfg.get('send_cpu', False):
                         states['cpu_usage'] = all_metrics['cpu_usage']
@@ -1645,4 +1687,7 @@ if __name__ == '__main__':
             import services.input_manager  # noqa: F401  — triggers the keycode_context cache
 
         controller = PrismDesktopApp()
+        # Windows shutdown/logoff ends the app without going through _quit():
+        # still tell Home Assistant the PC is going off (fork: power switch).
+        app.aboutToQuit.connect(controller._push_power_off_once)
         loop.run_forever()

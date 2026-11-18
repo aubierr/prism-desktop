@@ -4,6 +4,7 @@ Settings Widget
 Clean, minimalist, and bug-free implementation of the Settings panel.
 """
 
+import logging
 import os
 import shutil
 import subprocess
@@ -24,6 +25,8 @@ from core.build_info import VERSION_LABEL, get_display_version
 from core.worker_threads import ConnectionTestThread
 from ui.icons import Icons, get_mdi_font
 from services.update_checker import UpdateCheckerThread
+
+logger = logging.getLogger(__name__)
 from services.location_manager import (
     is_geoclue2_available, ensure_desktop_file,
     get_distro_info, get_geoclue2_install_hint,
@@ -679,7 +682,91 @@ class SettingsWidget(QWidget):
 
         vbox.addWidget(toggle_frame)
 
+        vbox.addWidget(self._build_power_pill())
+
         return container
+
+    def _build_power_pill(self) -> QFrame:
+        """Remote power control (fork feature): shutdown from HA + Wake-on-LAN helper."""
+        frame, form = self._make_pill_panel()
+        frame.layout().insertWidget(0, self._make_section_header(t("settings.ha.power_label")))
+
+        self.remote_power_check = ToggleSwitch(t("settings.ha.remote_power_toggle"))
+        self.remote_power_check.setToolTip(t("settings.ha.remote_power_tooltip"))
+        form.addRow("", self.remote_power_check)
+
+        self.power_switch_btn = QPushButton(t("settings.ha.power_switch_btn"))
+        self.power_switch_btn.setObjectName("updateBtn")
+        self.power_switch_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.power_switch_btn.setToolTip(t("settings.ha.power_switch_tooltip"))
+        self.power_switch_btn.clicked.connect(self._on_power_switch_clicked)
+        form.addRow("", self.power_switch_btn)
+
+        self._power_status_label = QLabel()
+        self._power_status_label.setWordWrap(True)
+        self._power_status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._power_status_label.setStyleSheet("color: #8e8e93; font-size: 11px;")
+        self._power_status_label.hide()
+        form.addRow("", self._power_status_label)
+        return frame
+
+    def _set_power_status(self, text: str):
+        self._power_status_label.setText(text)
+        self._power_status_label.show()
+
+    def _on_power_switch_clicked(self):
+        import asyncio
+        self.power_switch_btn.setEnabled(False)
+        self._set_power_status(t("settings.ha.power_switch_working"))
+        asyncio.ensure_future(self._create_power_switch())
+
+    async def _create_power_switch(self):
+        """Create (or update) the On/Off switch on this PC's Home Assistant device page."""
+        import asyncio
+        import socket
+        from services import power_control, power_switch
+        try:
+            mobile_cfg = self.config.setdefault('mobile_app', {})
+            ha_url = self.url_input.text().strip() or self.config.get('home_assistant', {}).get('url', '')
+            token = self.token_input.text().strip() or self.config.get('home_assistant', {}).get('token', '')
+            device_name = mobile_cfg.get('device_name') or socket.gethostname()
+            ip, mac, netmask = await asyncio.get_running_loop().run_in_executor(
+                None, power_control.network_identity, ha_url)
+            result = await power_switch.create_or_update(
+                ha_url, token,
+                mobile_device_id=mobile_cfg.get('device_id', ''),
+                webhook_id=mobile_cfg.get('webhook_id', ''),
+                device_slug=power_control.ha_slugify(device_name),
+                mac=mac, broadcast=power_control.broadcast_for(ip, netmask),
+                name=t("settings.ha.power_switch_name"),
+                existing_entry_id=mobile_cfg.get('power_switch_entry_id', ''),
+            )
+        except power_switch.PowerSwitchError as e:
+            logger.warning(f"[PowerSwitch] {e.key}: {e.detail}")
+            text = t(e.key)
+            if e.detail and e.key == "settings.ha.power_switch_err_http":
+                text += "\n" + e.detail[:200]
+            self._set_power_status(text)
+        except Exception as e:
+            logger.warning(f"[PowerSwitch] Failed: {e}")
+            self._set_power_status(t('settings.ha.power_switch_err_http') + "\n" + str(e))
+        else:
+            # The switch turns the PC off through Prism, so allow it, and save
+            # now so a second click updates this switch instead of adding one.
+            mobile_cfg['power_switch_entry_id'] = result.entry_id
+            mobile_cfg['remote_power'] = True
+            self.remote_power_check.setChecked(True)
+            if self.dashboard is not None:
+                self.dashboard.save_config_requested.emit()
+            lines = [t("settings.ha.power_switch_created" if result.created
+                       else "settings.ha.power_switch_updated")]
+            if result.wol_added:
+                lines.append(t("settings.ha.power_switch_wol_added"))
+            lines.append(f"MAC : {mac}" + (f"  ·  IP : {ip}" if ip else ""))
+            lines.append(t("settings.ha.power_switch_wol_hint"))
+            self._set_power_status("\n".join(lines))
+        finally:
+            self.power_switch_btn.setEnabled(True)
 
     def _build_appearance_panel(self) -> QWidget:
         container = QWidget()
@@ -1331,6 +1418,8 @@ class SettingsWidget(QWidget):
         self.send_ram_check.setChecked(mobile_cfg.get('send_ram', False))
         self.send_system_check.setChecked(mobile_cfg.get('send_system', False))
         self.send_presence_check.setChecked(mobile_cfg.get('send_presence', False))
+        self.remote_power_check.setChecked(mobile_cfg.get('remote_power', False))
+        self._power_status_label.hide()
 
         self.border_effect_combo.blockSignals(False)
 
@@ -1395,6 +1484,7 @@ class SettingsWidget(QWidget):
         self.config.setdefault('mobile_app', {})['send_ram'] = self.send_ram_check.isChecked()
         self.config.setdefault('mobile_app', {})['send_system'] = self.send_system_check.isChecked()
         self.config.setdefault('mobile_app', {})['send_presence'] = self.send_presence_check.isChecked()
+        self.config.setdefault('mobile_app', {})['remote_power'] = self.remote_power_check.isChecked()
 
         self.config.setdefault('assist', {})
         self.config['assist']['enabled'] = self.assist_enabled_check.isChecked()

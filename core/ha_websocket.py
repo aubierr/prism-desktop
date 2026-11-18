@@ -12,6 +12,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 import threading
 import logging
 
+from services.power_control import is_command as is_power_command
+
 
 class AuthenticationError(Exception):
     """Home Assistant rejected the access token."""
@@ -25,6 +27,7 @@ class HAWebSocket(QObject):
     disconnected = pyqtSignal()
     state_changed = pyqtSignal(str, dict)  # entity_id, new_state
     notification_received = pyqtSignal(dict)  # full notification payload dict
+    power_command_received = pyqtSignal(dict)  # 'command_*' sent to notify.mobile_app_* (push channel only)
     error = pyqtSignal(str)
     
     def __init__(self, url: str = "", token: str = ""):
@@ -213,7 +216,9 @@ class HAWebSocket(QObject):
                     payload = {'title': title, 'message': message_text, **extra}
                 else:
                     payload = {'title': title, 'message': message_text}
-                if message_text:
+                if is_power_command(message_text):
+                    self.power_command_received.emit(payload)
+                elif message_text:
                     self.notification_received.emit(payload)
                 return
 
