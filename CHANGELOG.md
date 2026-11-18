@@ -15,6 +15,10 @@
 - Esc now stops listening, a running request or speech, one at a time, before it closes the popup.
 - New setting: "Speak replies" turns off spoken replies to voice requests.
 
+### Fixes
+
+- `--toggle` and `--assist` now reach the running app on Windows instead of crashing.
+
 ### Security
 
 - Raised minimum dependency versions so source installs don't pull in releases with known vulnerabilities. Running from source now needs Python 3.11 or newer.

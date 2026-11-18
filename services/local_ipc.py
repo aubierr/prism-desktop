@@ -21,12 +21,24 @@ def prism_ipc_server_name() -> str:
 
 def send_local_command(command: str, timeout_ms: int = 1000) -> bool:
     """Send a command to the running Prism instance over a local socket."""
+    payload = command.strip().encode("utf-8")
+    if os.name == "nt":
+        # QLocalServer listens on a named pipe on Windows, and Python's socket
+        # module has no AF_UNIX there. A pipe opens like a file.
+        pipe_path = r"\\.\pipe" + "\\" + prism_ipc_server_name()
+        try:
+            with open(pipe_path, "wb", buffering=0) as pipe:
+                pipe.write(payload)
+            return True
+        except OSError:
+            return False
+
     socket_path = os.path.join(tempfile.gettempdir(), prism_ipc_server_name())
     try:
         sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
         sock.settimeout(timeout_ms / 1000.0)
         sock.connect(socket_path)
-        sock.sendall(command.strip().encode("utf-8"))
+        sock.sendall(payload)
         sock.close()
         return True
     except OSError:
