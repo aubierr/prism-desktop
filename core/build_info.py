@@ -8,6 +8,10 @@ import subprocess
 from pathlib import Path
 
 APP_VERSION = "1.7"
+# What the user sees, so a build of this fork can't be mistaken for an official
+# release. APP_VERSION stays the plain number: update checks, the version sent
+# to Home Assistant and the macOS bundle version all compare or parse it.
+VERSION_LABEL = f"{APP_VERSION}-fork"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SHORT_COMMIT_LENGTH = 12
 
@@ -50,9 +54,9 @@ def get_display_version() -> str:
     """Return a user-facing version string including commit metadata when available."""
     commit = get_build_commit()
     if not commit:
-        return APP_VERSION
+        return VERSION_LABEL
 
     suffix = f" ({commit})"
     if is_dirty_build():
         suffix = f" ({commit}, dirty)"
-    return f"{APP_VERSION}{suffix}"
+    return f"{VERSION_LABEL}{suffix}"
