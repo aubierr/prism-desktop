@@ -13,14 +13,14 @@ jobs:
   pytest:
     name: pytest (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # GitHub's macOS runners are often short on capacity: a macOS job that
-    # never starts or fails must not turn the whole run red.
-    continue-on-error: ${{ startsWith(matrix.os, 'macos') }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15]
+        # macOS runs in tests-macos.yml: GitHub's macOS runners are often out
+        # of capacity, and a job that is never picked up fails the whole run
+        # even with continue-on-error.
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout Code
