@@ -35,11 +35,16 @@ def test_has_service():
 
 
 def test_switch_options():
-    opts = ps.switch_options("binary_sensor.pc_power", "notify.mobile_app_pc",
-                             "AA:BB:CC:DD:EE:FF", "192.168.1.255", "dev123")
+    opts = ps.switch_options(
+        "binary_sensor.pc_power", "notify.mobile_app_pc", "AA:BB:CC:DD:EE:FF", "192.168.1.255", "dev123"
+    )
     assert opts["device_id"] == "dev123"
-    assert opts["turn_on"] == [{"action": "wake_on_lan.send_magic_packet",
-                                "data": {"mac": "AA:BB:CC:DD:EE:FF", "broadcast_address": "192.168.1.255"}}]
+    assert opts["turn_on"] == [
+        {
+            "action": "wake_on_lan.send_magic_packet",
+            "data": {"mac": "AA:BB:CC:DD:EE:FF", "broadcast_address": "192.168.1.255"},
+        }
+    ]
     assert opts["turn_off"] == [{"action": "notify.mobile_app_pc", "data": {"message": "command_shutdown"}}]
     tpl = opts["value_template"]
     assert "states['binary_sensor.pc_power']" in tpl
@@ -50,6 +55,7 @@ def test_switch_options():
 def test_state_template_renders_with_jinja():
     jinja2 = __import__("pytest").importorskip("jinja2")
     from datetime import datetime, timedelta, timezone
+
     now = datetime(2026, 11, 18, 22, 0, tzinfo=timezone.utc)
 
     class S:
@@ -61,6 +67,6 @@ def test_state_template_renders_with_jinja():
         return tpl.render(states={"binary_sensor.pc_power": state}, now=lambda: now).strip()
 
     assert render(S("on", 20)) == "True"
-    assert render(S("on", 600)) == "False"   # Prism stopped reporting: PC off or crashed
+    assert render(S("on", 600)) == "False"  # Prism stopped reporting: PC off or crashed
     assert render(S("off", 5)) == "False"
     assert render(None) == "False"

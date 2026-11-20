@@ -115,13 +115,15 @@ class WindowMoveMixin:
 
     def _handle_alt_drag(self, obj, event) -> bool:
         """Called from the app-level event filter. Returns True if consumed."""
-        if (event.type() == QEvent.Type.MouseButtonPress
-                and event.button() == Qt.MouseButton.LeftButton
-                and event.modifiers() & Qt.KeyboardModifier.AltModifier
-                and not self._user_moving
-                and not self._is_resizing_window
-                and not self._assist_active
-                and (obj is self or self.isAncestorOf(obj))):
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and event.button() == Qt.MouseButton.LeftButton
+            and event.modifiers() & Qt.KeyboardModifier.AltModifier
+            and not self._user_moving
+            and not self._is_resizing_window
+            and not self._assist_active
+            and (obj is self or self.isAncestorOf(obj))
+        ):
             self._start_window_move(event.globalPosition().toPoint())
             return True
         return False

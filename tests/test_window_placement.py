@@ -2,7 +2,7 @@ from PyQt6.QtCore import QPoint, QRect
 
 from ui import window_placement as wp
 
-LEFT = QRect(0, 0, 1920, 1040)        # primary, taskbar at the bottom
+LEFT = QRect(0, 0, 1920, 1040)  # primary, taskbar at the bottom
 RIGHT = QRect(1920, -200, 2560, 1400)  # second monitor, taller and offset up
 
 

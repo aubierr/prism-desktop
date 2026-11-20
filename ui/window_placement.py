@@ -26,8 +26,7 @@ def saved_anchor(config: dict) -> Optional[QPoint]:
     if not isinstance(pos, dict):
         return None
     right, top = pos.get("right"), pos.get("top")
-    if not isinstance(right, int) or not isinstance(top, int) \
-            or isinstance(right, bool) or isinstance(top, bool):
+    if not isinstance(right, int) or not isinstance(top, int) or isinstance(right, bool) or isinstance(top, bool):
         return None
     return QPoint(right, top)
 
@@ -46,8 +45,7 @@ def clear_anchor(config: dict) -> bool:
     return config.get("appearance", {}).pop(CONFIG_KEY, None) is not None
 
 
-def place(anchor: QPoint, width: int, height: int,
-          screens: Iterable[QRect]) -> Optional[QPoint]:
+def place(anchor: QPoint, width: int, height: int, screens: Iterable[QRect]) -> Optional[QPoint]:
     """Top-left position for a window of the given size at the saved anchor.
 
     The window is kept fully inside the available area of the screen it

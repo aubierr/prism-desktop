@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Window position (fork)
+
+- Move the dashboard anywhere, on any screen: drag it by its right edge or by the top/bottom edge you don't resize from, or hold Alt and drag from anywhere on it. It reopens where you left it, including after a restart. If that screen is unplugged it goes back next to the tray until the screen returns.
+- Tray menu → "Reset window position" puts it back next to the tray.
+
+### Turn the PC on and off from Home Assistant (fork)
+
+- New setting (off by default): *Settings → Home Assistant → Allow shutdown from Home Assistant*. Home Assistant can then send `command_shutdown`, `command_restart`, `command_sleep`, `command_hibernate`, `command_lock` or `command_cancel` to `notify.mobile_app_<this PC>`, with an optional `delay` in seconds. Only messages sent to that notify service count; persistent notifications never do.
+- "Add the On/Off switch to Home Assistant" creates a **Power** switch on this PC's device page in Home Assistant: on wakes the PC with Wake-on-LAN, off shuts it down through Prism. Its state follows a new *Power* sensor that Prism reports every 30 s.
+
+### Fork security fixes
+
+- On Windows, when the Credential Manager can't be used, the token file is now encrypted with your Windows account (DPAPI) instead of a key derived from the machine ID. An existing token file is converted the next time the app starts.
+- The auto-updater now refuses a download it cannot check against the release's SHA256SUMS, instead of installing it unchecked when that file is missing.
+
 ### Camera picture-in-picture
 
 - New: pop a camera out into a floating window that stays on top and keeps playing while the dashboard is closed. Right-click a camera or 3D printer tile and choose "Picture in picture", or use the new button in the camera view.

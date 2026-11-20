@@ -11,11 +11,20 @@ from core.temperature_utils import (
 )
 
 
-@pytest.mark.parametrize("raw, expected", [
-    ("°C", "C"), ("c", "C"), (" Celsius ", "C"),
-    ("°F", "F"), ("fahrenheit", "F"),
-    ("K", None), ("", None), (None, None), ("%", None),
-])
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("°C", "C"),
+        ("c", "C"),
+        (" Celsius ", "C"),
+        ("°F", "F"),
+        ("fahrenheit", "F"),
+        ("K", None),
+        ("", None),
+        (None, None),
+        ("%", None),
+    ],
+)
 def test_normalize_temperature_unit(raw, expected):
     assert normalize_temperature_unit(raw) == expected
 
@@ -31,13 +40,16 @@ def test_unit_suffix():
     assert unit_suffix("lux") == "°"
 
 
-@pytest.mark.parametrize("value, src, dst, expected", [
-    (0, "°C", "°F", 32.0),
-    (100, "C", "F", 212.0),
-    (212, "F", "C", 100.0),
-    ("21.5", "C", "C", 21.5),
-    (20, "C", None, 20.0),  # unknown target: value unchanged
-])
+@pytest.mark.parametrize(
+    "value, src, dst, expected",
+    [
+        (0, "°C", "°F", 32.0),
+        (100, "C", "F", 212.0),
+        (212, "F", "C", 100.0),
+        ("21.5", "C", "C", 21.5),
+        (20, "C", None, 20.0),  # unknown target: value unchanged
+    ],
+)
 def test_convert_temperature(value, src, dst, expected):
     assert convert_temperature(value, src, dst) == pytest.approx(expected)
 
@@ -53,15 +65,18 @@ def test_convert_delta_has_no_offset():
     assert convert_temperature_delta(18, "F", "C") == pytest.approx(10.0)
 
 
-@pytest.mark.parametrize("value, src, pref, expected", [
-    (20.0, "°C", None, "20°C"),
-    (20.05, "°C", None, "20.1°C"),
-    ("20.05", "°C", None, "20.1°C"),
-    (0, "°C", "fahrenheit", "32°F"),
-    (-0.01, "°C", None, "0°C"),  # no "-0"
-    (None, "°C", None, "--°C"),
-    ("unknown", None, None, "--"),
-])
+@pytest.mark.parametrize(
+    "value, src, pref, expected",
+    [
+        (20.0, "°C", None, "20°C"),
+        (20.05, "°C", None, "20.1°C"),
+        ("20.05", "°C", None, "20.1°C"),
+        (0, "°C", "fahrenheit", "32°F"),
+        (-0.01, "°C", None, "0°C"),  # no "-0"
+        (None, "°C", None, "--°C"),
+        ("unknown", None, None, "--"),
+    ],
+)
 def test_format_temperature(value, src, pref, expected):
     assert format_temperature(value, src, pref) == expected
 

@@ -2562,8 +2562,7 @@ class Dashboard(WindowMoveMixin, QWidget):
             near_vertical_resize = (
                 pos.y() > self.height() - RESIZE_MARGIN if self._is_top_anchored() else pos.y() < RESIZE_MARGIN
             )
-            if (not near_vertical_resize and pos.x() >= RESIZE_MARGIN
-                    and not self._in_move_zone(pos.x(), pos.y())):
+            if not near_vertical_resize and pos.x() >= RESIZE_MARGIN and not self._in_move_zone(pos.x(), pos.y()):
                 self.unsetCursor()
         return super().eventFilter(obj, event)
 

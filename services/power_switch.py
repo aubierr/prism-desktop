@@ -39,11 +39,12 @@ class PowerSwitchError(Exception):
 @dataclass
 class PowerSwitchResult:
     entry_id: str
-    created: bool          # False when an existing switch was updated
-    wol_added: bool        # True when the Wake-on-LAN integration had to be set up
+    created: bool  # False when an existing switch was updated
+    wol_added: bool  # True when the Wake-on-LAN integration had to be set up
 
 
 # ── Pure helpers (unit tested) ───────────────────────────────────────────────
+
 
 def find_ha_device_id(devices: list, mobile_device_id: str) -> Optional[str]:
     """Device registry id of the Prism device (identifier ["mobile_app", <id>])."""
@@ -72,8 +73,7 @@ def find_notify_service(services: list, device_slug: str) -> Optional[str]:
 
 
 def has_service(services: list, domain: str, service: str) -> bool:
-    return any(d.get("domain") == domain and service in (d.get("services") or {})
-               for d in services or [])
+    return any(d.get("domain") == domain and service in (d.get("services") or {}) for d in services or [])
 
 
 def state_template(sensor_entity_id: str) -> str:
@@ -84,8 +84,9 @@ def state_template(sensor_entity_id: str) -> str:
     )
 
 
-def switch_options(sensor_entity_id: str, notify_service: str, mac: str,
-                   broadcast: Optional[str], ha_device_id: str) -> dict:
+def switch_options(
+    sensor_entity_id: str, notify_service: str, mac: str, broadcast: Optional[str], ha_device_id: str
+) -> dict:
     """Fields of the template switch form (minus the name)."""
     wol_data = {"mac": mac}
     if broadcast:
@@ -100,6 +101,7 @@ def switch_options(sensor_entity_id: str, notify_service: str, mac: str,
 
 # ── Home Assistant API ───────────────────────────────────────────────────────
 
+
 class _HA:
     def __init__(self, session: aiohttp.ClientSession, url: str, token: str):
         self.s = session
@@ -107,16 +109,21 @@ class _HA:
         self.token = token
 
     async def rest(self, method: str, path: str, json=None):
-        async with self.s.request(method, self.url + path, json=json,
-                                  headers={"Authorization": f"Bearer {self.token}"},
-                                  timeout=aiohttp.ClientTimeout(total=15)) as r:
+        async with self.s.request(
+            method,
+            self.url + path,
+            json=json,
+            headers={"Authorization": f"Bearer {self.token}"},
+            timeout=aiohttp.ClientTimeout(total=15),
+        ) as r:
             if r.status in (401, 403):
                 # Home Assistant answers 401 both for a bad token and for a
                 # non-admin user on the config API.
                 raise PowerSwitchError("settings.ha.power_switch_err_admin")
             if r.status >= 400:
-                raise PowerSwitchError("settings.ha.power_switch_err_http",
-                                       f"{method} {path}: HTTP {r.status} {await r.text()}")
+                raise PowerSwitchError(
+                    "settings.ha.power_switch_err_http", f"{method} {path}: HTTP {r.status} {await r.text()}"
+                )
             return await r.json(content_type=None)
 
     async def ws_commands(self, *commands: dict) -> list:
@@ -139,8 +146,7 @@ class _HA:
                     err = msg.get("error") or {}
                     if err.get("code") == "unauthorized":
                         raise PowerSwitchError("settings.ha.power_switch_err_admin")
-                    raise PowerSwitchError("settings.ha.power_switch_err_http",
-                                           f"{cmd['type']}: {err}")
+                    raise PowerSwitchError("settings.ha.power_switch_err_http", f"{cmd['type']}: {err}")
                 results.append(msg.get("result"))
             return results
 
@@ -170,9 +176,18 @@ async def _ensure_wake_on_lan(ha: _HA, services: list, mac: str, broadcast: Opti
     return res.get("type") == "create_entry"
 
 
-async def create_or_update(ha_url: str, token: str, *, mobile_device_id: str, webhook_id: str,
-                           device_slug: str, mac: str, broadcast: Optional[str],
-                           name: str, existing_entry_id: str = "") -> PowerSwitchResult:
+async def create_or_update(
+    ha_url: str,
+    token: str,
+    *,
+    mobile_device_id: str,
+    webhook_id: str,
+    device_slug: str,
+    mac: str,
+    broadcast: Optional[str],
+    name: str,
+    existing_entry_id: str = "",
+) -> PowerSwitchResult:
     if not (ha_url and token and webhook_id and mobile_device_id):
         raise PowerSwitchError("settings.ha.power_switch_err_not_registered")
     if not mac:
@@ -199,8 +214,7 @@ async def create_or_update(ha_url: str, token: str, *, mobile_device_id: str, we
         options = switch_options(sensor_id, notify, mac, broadcast, ha_device_id)
 
         if await _entry_exists(ha, existing_entry_id):
-            flow = await ha.rest("POST", "/api/config/config_entries/options/flow",
-                                 {"handler": existing_entry_id})
+            flow = await ha.rest("POST", "/api/config/config_entries/options/flow", {"handler": existing_entry_id})
             if flow.get("type") == "form" and flow.get("step_id") != "switch":
                 flow = await ha.submit_flow("config_entries/options", flow["flow_id"], {})
             res = await ha.submit_flow("config_entries/options", flow["flow_id"], options)

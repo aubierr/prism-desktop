@@ -34,17 +34,18 @@ def test_plaintext_token_is_migrated_and_scrubbed(isolated_config):
 
 def test_stored_token_wins_over_file(isolated_config):
     store_token("from-storage")
-    write_config(isolated_config / "config.json",
-                 {"home_assistant": {"url": "u", "token": "stale"}})
+    write_config(isolated_config / "config.json", {"home_assistant": {"url": "u", "token": "stale"}})
     assert ConfigManager().config["home_assistant"]["token"] == "from-storage"
 
 
 def test_legacy_slots_become_row_col_and_get_page_zero(isolated_config):
-    write_config(isolated_config / "config.json", {
-        "appearance": {"cols": 3},
-        "buttons": [{"slot": 4, "entity_id": "light.a"},
-                    {"row": 1, "col": 1, "page": 2, "entity_id": "light.b"}],
-    })
+    write_config(
+        isolated_config / "config.json",
+        {
+            "appearance": {"cols": 3},
+            "buttons": [{"slot": 4, "entity_id": "light.a"}, {"row": 1, "col": 1, "page": 2, "entity_id": "light.b"}],
+        },
+    )
     buttons = ConfigManager().config["buttons"]
     assert buttons[0] == {"slot": 4, "entity_id": "light.a", "row": 1, "col": 1, "page": 0}
     assert buttons[1]["page"] == 2  # existing page untouched

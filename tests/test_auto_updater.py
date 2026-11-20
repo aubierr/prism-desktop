@@ -64,14 +64,17 @@ def test_mismatching_sum_is_refused(download):
     assert verify(download, SUMS, REAL_SUMS_1_7)[0] is False
 
 
-@pytest.mark.parametrize("platform_name, machine, expected", [
-    ("win32", "AMD64", "PrismDesktopSetup.exe"),
-    ("linux", "x86_64", "PrismDesktop-x86_64.AppImage"),
-    ("linux", "aarch64", "PrismDesktop-aarch64.AppImage"),
-    ("darwin", "arm64", "PrismDesktop-macOS-arm64.zip"),
-    ("darwin", "x86_64", "PrismDesktop-macOS-x86_64.zip"),
-    ("freebsd13", "amd64", None),
-])
+@pytest.mark.parametrize(
+    "platform_name, machine, expected",
+    [
+        ("win32", "AMD64", "PrismDesktopSetup.exe"),
+        ("linux", "x86_64", "PrismDesktop-x86_64.AppImage"),
+        ("linux", "aarch64", "PrismDesktop-aarch64.AppImage"),
+        ("darwin", "arm64", "PrismDesktop-macOS-arm64.zip"),
+        ("darwin", "x86_64", "PrismDesktop-macOS-x86_64.zip"),
+        ("freebsd13", "amd64", None),
+    ],
+)
 def test_platform_asset_name(monkeypatch, platform_name, machine, expected):
     monkeypatch.setattr(au.sys, "platform", platform_name)
     monkeypatch.setattr(au.platform, "machine", lambda: machine)

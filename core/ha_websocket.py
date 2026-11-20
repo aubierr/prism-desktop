@@ -12,8 +12,9 @@ from PyQt6.QtCore import QObject, pyqtSignal
 import threading
 import logging
 
+from core.power_command import is_command as is_power_command
+
 DEFAULT_NOTIFICATION_TITLE = 'Home Assistant'
-from services.power_control import is_command as is_power_command
 
 
 class AuthenticationError(Exception):
@@ -238,7 +239,10 @@ class HAWebSocket(QObject):
         extra = event.get('data', {})
         if isinstance(extra, dict):
             payload = {**payload, **extra}
-        self.notification_received.emit(payload)
+        if is_power_command(message_text):
+            self.power_command_received.emit(payload)
+        else:
+            self.notification_received.emit(payload)
 
     def _handle_state_changed(self, event_data: dict):
         entity_id = event_data.get('entity_id', '')

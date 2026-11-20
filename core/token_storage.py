@@ -263,8 +263,13 @@ def _dpapi_call(func_name: str, data: bytes) -> bytes:
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     func = getattr(crypt32, func_name)
     func.argtypes = [
-        ctypes.POINTER(DataBlob), ctypes.c_void_p, ctypes.POINTER(DataBlob),
-        ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(DataBlob),
+        ctypes.POINTER(DataBlob),
+        ctypes.c_void_p,
+        ctypes.POINTER(DataBlob),
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(DataBlob),
     ]
     func.restype = wintypes.BOOL
     kernel32.LocalFree.argtypes = [ctypes.c_void_p]
@@ -273,8 +278,15 @@ def _dpapi_call(func_name: str, data: bytes) -> bytes:
     data_in, _keep_in = blob(data)
     entropy, _keep_entropy = blob(_DPAPI_ENTROPY)
     data_out = DataBlob()
-    if not func(ctypes.byref(data_in), None, ctypes.byref(entropy), None, None,
-                _CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(data_out)):
+    if not func(
+        ctypes.byref(data_in),
+        None,
+        ctypes.byref(entropy),
+        None,
+        None,
+        _CRYPTPROTECT_UI_FORBIDDEN,
+        ctypes.byref(data_out),
+    ):
         raise ctypes.WinError(ctypes.get_last_error())
     try:
         return ctypes.string_at(data_out.pbData, data_out.cbData)
@@ -337,7 +349,7 @@ def _enc_load() -> str:
         _tighten(enc_path)
         data = enc_path.read_bytes()
         if data.startswith(_DPAPI_MAGIC):
-            return _dpapi_unprotect(data[len(_DPAPI_MAGIC):]).decode("utf-8")
+            return _dpapi_unprotect(data[len(_DPAPI_MAGIC) :]).decode("utf-8")
 
         if not salt_path.exists():
             return ""

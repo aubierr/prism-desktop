@@ -27,8 +27,7 @@ def ws(qapp):
 
 
 def push(message, **data):
-    return {"type": "event", "id": PUSH_ID,
-            "event": {"message": message, "title": "HA", "data": data}}
+    return {"type": "event", "id": PUSH_ID, "event": {"message": message, "title": "HA", "data": data}}
 
 
 def test_push_command_goes_to_power_signal(ws):
@@ -48,12 +47,19 @@ def test_normal_push_message_is_still_a_notification(ws):
 
 def test_persistent_notification_never_triggers_power(ws):
     client, got = ws
-    asyncio.run(client._handle_message({
-        "type": "event", "id": 99,
-        "event": {"event_type": "state_changed", "data": {
-            "entity_id": "persistent_notification.x",
-            "new_state": {"state": "notifying",
-                          "attributes": {"message": "command_shutdown"}},
-        }},
-    }))
+    asyncio.run(
+        client._handle_message(
+            {
+                "type": "event",
+                "id": 99,
+                "event": {
+                    "event_type": "state_changed",
+                    "data": {
+                        "entity_id": "persistent_notification.x",
+                        "new_state": {"state": "notifying", "attributes": {"message": "command_shutdown"}},
+                    },
+                },
+            }
+        )
+    )
     assert got["power"] == []

@@ -34,9 +34,10 @@ import unicodedata
 from typing import Callable, Optional
 from urllib.parse import urlsplit
 
+from core.power_command import COMMAND_PREFIX, is_command
+
 logger = logging.getLogger(__name__)
 
-COMMAND_PREFIX = "command_"
 ACTIONS = ("shutdown", "restart", "sleep", "hibernate", "lock", "cancel")
 # Actions after which the PC is off (as far as the HA switch is concerned).
 POWER_OFF_ACTIONS = ("shutdown", "sleep", "hibernate")
@@ -50,11 +51,6 @@ _pending_lock = threading.Lock()
 
 # ── Parsing ──────────────────────────────────────────────────────────────────
 
-def is_command(message) -> bool:
-    """True for any 'command_*' message, known or not, so unknown commands are
-    swallowed instead of being shown as a notification."""
-    return isinstance(message, str) and message.strip().lower().startswith(COMMAND_PREFIX)
-
 
 def parse_command(payload: dict) -> Optional[tuple[str, int]]:
     """(action, delay_seconds) for a known command, else None."""
@@ -63,7 +59,7 @@ def parse_command(payload: dict) -> Optional[tuple[str, int]]:
     message = payload.get("message")
     if not is_command(message):
         return None
-    action = message.strip().lower()[len(COMMAND_PREFIX):]
+    action = message.strip().lower()[len(COMMAND_PREFIX) :]
     if action not in ACTIONS:
         return None
     return action, parse_delay(payload.get("delay"))
@@ -81,6 +77,7 @@ def parse_delay(raw) -> int:
 
 
 # ── Platform commands ────────────────────────────────────────────────────────
+
 
 def os_command(action: str, delay: int, platform: str = sys.platform) -> Optional[list]:
     """Shell command for an action, or None when it is done another way
@@ -127,6 +124,7 @@ def is_supported(action: str, platform: str = sys.platform) -> bool:
 
 def _win_sleep():
     import ctypes
+
     # SetSuspendState(hibernate=False, force=False, disableWakeEvent=False).
     # Note: Windows hibernates instead when hibernation is enabled.
     ctypes.windll.powrprof.SetSuspendState(False, False, False)
@@ -134,6 +132,7 @@ def _win_sleep():
 
 def _win_lock():
     import ctypes
+
     ctypes.windll.user32.LockWorkStation()
 
 
@@ -173,8 +172,7 @@ def _run_logged(runner, action: str):
         logger.error(f"[Power] Delayed '{action}' failed: {e}")
 
 
-def execute(action: str, delay: int = 0,
-            runner: Callable[[str, int], None] = _run_now) -> None:
+def execute(action: str, delay: int = 0, runner: Callable[[str, int], None] = _run_now) -> None:
     """Carry out an action. Never raises (logs instead)."""
     global _pending_timer
     try:
@@ -203,6 +201,7 @@ def execute(action: str, delay: int = 0,
 
 # ── Wake-on-LAN helper ───────────────────────────────────────────────────────
 
+
 def local_ip_towards(ha_url: str) -> Optional[str]:
     """IP address of the network interface this PC uses to reach Home Assistant.
     A UDP connect sends no packet; it only picks the route."""
@@ -230,12 +229,13 @@ def normalize_mac(raw) -> Optional[str]:
     hexdigits = re.sub(r"[-:.]", "", raw.strip()).upper()
     if not re.fullmatch(r"[0-9A-F]{12}", hexdigits) or hexdigits == "0" * 12:
         return None
-    return ":".join(hexdigits[i:i + 2] for i in range(0, 12, 2))
+    return ":".join(hexdigits[i : i + 2] for i in range(0, 12, 2))
 
 
 def find_mac_for_ip(if_addrs: dict, ip: str) -> Optional[str]:
     """MAC of the interface holding `ip`, from psutil.net_if_addrs()-shaped data."""
     import psutil
+
     for addrs in if_addrs.values():
         if not any(getattr(a, "address", None) == ip for a in addrs):
             continue
@@ -258,6 +258,7 @@ def find_netmask_for_ip(if_addrs: dict, ip: str) -> Optional[str]:
 def network_identity(ha_url: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """(ip, mac, netmask) of the interface used to reach Home Assistant."""
     import psutil
+
     ip = local_ip_towards(ha_url)
     if not ip:
         return None, None, None

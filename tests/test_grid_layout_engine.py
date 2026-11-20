@@ -4,8 +4,7 @@ from ui.grid_layout_engine import GridLayoutEngine, plan_move
 class FakeButton:
     """Stands in for DashboardButton: only what the engine reads."""
 
-    def __init__(self, row=None, col=None, span_x=1, span_y=1, entity="light.x",
-                 visible=True, btn_type=None):
+    def __init__(self, row=None, col=None, span_x=1, span_y=1, entity="light.x", visible=True, btn_type=None):
         if row is None:
             self.config = {}
         else:
@@ -31,6 +30,7 @@ def cells(placements):
 
 
 # --- calculate_layout -------------------------------------------------------
+
 
 def test_layout_places_buttons_and_fills_the_rest():
     a, b = FakeButton(0, 0), FakeButton(1, 2, span_x=2)
@@ -76,6 +76,7 @@ def test_colliding_button_loses_and_marks_free_cells_forbidden():
 
 # --- find_first_empty_slot ----------------------------------------------------
 
+
 def test_first_empty_slot_respects_span():
     buttons = [FakeButton(0, 0), FakeButton(0, 2)]
     engine = GridLayoutEngine(cols=4)
@@ -95,6 +96,7 @@ def test_first_empty_slot_when_full():
 
 # --- find_relocations ---------------------------------------------------------
 
+
 def test_relocations_empty_when_nothing_overlaps():
     a, b = FakeButton(0, 0), FakeButton(1, 3)
     assert GridLayoutEngine(cols=4).find_relocations(a, 2, 1, [a, b], rows=2) == []
@@ -113,6 +115,7 @@ def test_relocations_block_resize_when_no_room():
 
 
 # --- plan_move ----------------------------------------------------------------
+
 
 def cfg(row, col, span_x=1, span_y=1):
     return {"entity_id": "light.x", "row": row, "col": col, "span_x": span_x, "span_y": span_y}

@@ -41,18 +41,20 @@ from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QPixmap, QPainter
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
 from core.localization_manager import t, current_language, supported_languages, init_localization
 
+from core.utils import keep_task
 from core.build_info import VERSION_LABEL, get_display_version
 from core.worker_threads import ConnectionTestThread
 from ui.icons import Icons, get_mdi_font
 from services.update_checker import UpdateCheckerThread
 
-logger = logging.getLogger(__name__)
 from services.location_manager import (
     is_geoclue2_available,
     ensure_desktop_file,
     get_distro_info,
     get_geoclue2_install_hint,
 )
+
+logger = logging.getLogger(__name__)
 
 # The record button's dot (idle); a rounded square while recording
 RECORD_ICON_IDLE_STYLE = 'background-color: white; border-radius: 6px;'
@@ -763,28 +765,33 @@ class SettingsWidget(QWidget):
 
     def _on_power_switch_clicked(self):
         import asyncio
+
         self.power_switch_btn.setEnabled(False)
         self._set_power_status(t("settings.ha.power_switch_working"))
-        asyncio.ensure_future(self._create_power_switch())
+        keep_task(asyncio.ensure_future(self._create_power_switch()))
 
     async def _create_power_switch(self):
         """Create (or update) the On/Off switch on this PC's Home Assistant device page."""
         import asyncio
         import socket
         from services import power_control, power_switch
+
         try:
             mobile_cfg = self.config.setdefault('mobile_app', {})
             ha_url = self.url_input.text().strip() or self.config.get('home_assistant', {}).get('url', '')
             token = self.token_input.text().strip() or self.config.get('home_assistant', {}).get('token', '')
             device_name = mobile_cfg.get('device_name') or socket.gethostname()
             ip, mac, netmask = await asyncio.get_running_loop().run_in_executor(
-                None, power_control.network_identity, ha_url)
+                None, power_control.network_identity, ha_url
+            )
             result = await power_switch.create_or_update(
-                ha_url, token,
+                ha_url,
+                token,
                 mobile_device_id=mobile_cfg.get('device_id', ''),
                 webhook_id=mobile_cfg.get('webhook_id', ''),
                 device_slug=power_control.ha_slugify(device_name),
-                mac=mac, broadcast=power_control.broadcast_for(ip, netmask),
+                mac=mac,
+                broadcast=power_control.broadcast_for(ip, netmask),
                 name=t("settings.ha.power_switch_name"),
                 existing_entry_id=mobile_cfg.get('power_switch_entry_id', ''),
             )
@@ -805,8 +812,7 @@ class SettingsWidget(QWidget):
             self.remote_power_check.setChecked(True)
             if self.dashboard is not None:
                 self.dashboard.save_config_requested.emit()
-            lines = [t("settings.ha.power_switch_created" if result.created
-                       else "settings.ha.power_switch_updated")]
+            lines = [t("settings.ha.power_switch_created" if result.created else "settings.ha.power_switch_updated")]
             if result.wol_added:
                 lines.append(t("settings.ha.power_switch_wol_added"))
             lines.append(f"MAC : {mac}" + (f"  ·  IP : {ip}" if ip else ""))

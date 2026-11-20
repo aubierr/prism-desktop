@@ -805,7 +805,7 @@ class PrismDesktopApp(QObject):
                 self.dashboard.apply_camera_cache(self._camera_cache)
             self._assist_opened_dashboard = False
             self.dashboard.toggle(self._tray_geometry())
-    
+
     def _push_power_off_once(self):
         if not getattr(self, '_power_off_pushed', False):
             self._push_sensor_state_sync(False)
@@ -1329,27 +1329,33 @@ class PrismDesktopApp(QObject):
         action, delay = parsed
         if not self.config.get('mobile_app', {}).get('remote_power', False):
             logger.warning(f"[Power] '{message}' ignored: remote power control is off in Settings")
-            self.notification_manager.show_ha_notification({
-                'title': 'Prism Desktop',
-                'message': t("notifications.power_disabled", command=message),
-            })
+            self.notification_manager.show_ha_notification(
+                {
+                    'title': 'Prism Desktop',
+                    'message': t("notifications.power_disabled", command=message),
+                }
+            )
             return
         if not power_control.is_supported(action):
             logger.warning(f"[Power] '{action}' is not supported on this system")
             return
         if delay and action != 'cancel':
-            self.notification_manager.show_ha_notification({
-                'title': 'Prism Desktop',
-                'message': t(f"notifications.power_{action}_in", seconds=delay),
-            })
+            self.notification_manager.show_ha_notification(
+                {
+                    'title': 'Prism Desktop',
+                    'message': t(f"notifications.power_{action}_in", seconds=delay),
+                }
+            )
+
         def run():
             if action in power_control.POWER_OFF_ACTIONS and not delay:
                 # Switch shows off right away instead of waiting for the heartbeat to go stale.
                 self._push_sensor_state_sync(False)
             power_control.execute(action, delay)
+
         # Commands can block a few seconds (subprocess); keep the UI responsive.
         threading.Thread(target=run, name=f"power-{action}", daemon=True).start()
-    
+
     @pyqtSlot()
     def on_ws_connected(self):
         logger.info("WS Connected")
@@ -1507,7 +1513,11 @@ class PrismDesktopApp(QObject):
     async def _slow_sensor_states(mobile_cfg: dict, slow_ids: set) -> dict:
         """CPU/RAM (when switched on) and the slow system/presence sensors."""
         metrics = get_system_metrics()
-        states = {key: metrics[key] for key, setting in (('cpu_usage', 'send_cpu'), ('ram_usage', 'send_ram')) if mobile_cfg.get(setting, False)}
+        states = {
+            key: metrics[key]
+            for key, setting in (('cpu_usage', 'send_cpu'), ('ram_usage', 'send_ram'))
+            if mobile_cfg.get(setting, False)
+        }
         states['power_state'] = True  # heartbeat for the HA power switch (fork)
         if slow_ids:
             loop = asyncio.get_running_loop()
