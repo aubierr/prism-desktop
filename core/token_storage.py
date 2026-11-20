@@ -130,7 +130,7 @@ def _linux_machine_id() -> str | None:
     for path in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
         try:
             seed = Path(path).read_text().strip()
-        except Exception:
+        except (OSError, ValueError):
             continue
         if seed:
             return seed
@@ -148,7 +148,7 @@ def _windows_machine_guid() -> str | None:
         seed, _ = winreg.QueryValueEx(key, "MachineGuid")
         winreg.CloseKey(key)
         return seed
-    except Exception:
+    except OSError:  # key or value missing
         return None
 
 
@@ -166,7 +166,7 @@ def _macos_platform_uuid() -> str | None:
         for line in result.stdout.splitlines():
             if "IOPlatformUUID" in line:
                 return line.split('"')[-2]
-    except Exception:
+    except (OSError, subprocess.SubprocessError, IndexError):
         pass
     return None
 

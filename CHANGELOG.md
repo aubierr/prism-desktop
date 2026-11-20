@@ -14,6 +14,7 @@
 
 ### Fork security fixes
 
+- Catch-all `except` blocks now catch only the errors they expect (a real bug is no longer swallowed), the thread and loop safety nets log a traceback, and `print()` calls in the shortcut and icon code go through logging, since packaged builds have no console.
 - On Windows, when the Credential Manager can't be used, the token file is now encrypted with your Windows account (DPAPI) instead of a key derived from the machine ID. An existing token file is converted the next time the app starts.
 - The auto-updater now refuses a download it cannot check against the release's SHA256SUMS, instead of installing it unchecked when that file is missing.
 
